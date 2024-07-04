@@ -1,5 +1,65 @@
 document.getElementById('add-task-btn').addEventListener('click', addTask);
-window.addEventListener('load', loadTasks);
+window.addEventListener('load', initializeApp);
+
+let voiceEnabled = false;
+
+function initializeApp() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        document.getElementById('toggle-voice-btn').disabled = false;
+        document.getElementById('toggle-voice-btn').classList.add('enabled');
+        document.getElementById('toggle-voice-btn').textContent = 'Voz: Desactivada';
+        document.getElementById('toggle-voice-btn').addEventListener('click', toggleVoice);
+    }
+}
+
+function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const button = document.getElementById('toggle-voice-btn');
+    if (voiceEnabled) {
+        button.textContent = 'Voz: Activada';
+    } else {
+        button.textContent = 'Voz: Desactivada';
+    }
+}
+
+function addTask() {
+    const useVoice = voiceEnabled && confirm('¿Quieres hablar la tarea? (Aceptar para hablar, Cancelar para escribir)');
+    if (useVoice) {
+        startVoiceRecognition();
+    } else {
+        const taskName = prompt('Introduce el nombre de la tarea:', 'Nueva Tarea');
+        if (taskName !== null) {
+            const taskPriority = prompt('Introduce la prioridad de la tarea (por defecto es 0):', '0');
+            if (taskPriority !== null && !isNaN(taskPriority)) {
+                const taskItem = createTaskElement(taskName, taskPriority);
+                document.getElementById('task-list').appendChild(taskItem);
+                saveTasks();
+            } else {
+                alert('Prioridad inválida. Introduce un número.');
+            }
+        }
+    }
+}
+
+function startVoiceRecognition() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'es-ES';
+    recognition.start();
+    recognition.onresult = function(event) {
+        const taskName = event.results[0][0].transcript;
+        const taskPriority = prompt('Introduce la prioridad de la tarea (por defecto es 0):', '0');
+        if (taskPriority !== null && !isNaN(taskPriority)) {
+            const taskItem = createTaskElement(taskName, taskPriority);
+            document.getElementById('task-list').appendChild(taskItem);
+            saveTasks();
+        } else {
+            alert('Prioridad inválida. Introduce un número.');
+        }
+    };
+    recognition.onerror = function(event) {
+        alert('Error en el reconocimiento de voz: ' + event.error);
+    };
+}
 
 function saveTasks() {
     const tasks = [];
@@ -25,23 +85,6 @@ function loadTasks() {
         document.getElementById('task-list').appendChild(taskItem);
         updateCompleteButtonState(taskItem);
     });
-}
-
-function addTask() {
-    const taskName = prompt('Introduce el nombre de la tarea:', 'Nueva Tarea');
-    if (taskName === null) {
-        return; // Usuario canceló el prompt
-    }
-
-    const taskPriority = prompt('Introduce la prioridad de la tarea (por defecto es 0):', '0');
-    if (taskPriority === null || isNaN(taskPriority)) {
-        alert('Prioridad inválida. Introduce un número.');
-        return;
-    }
-
-    const taskItem = createTaskElement(taskName, taskPriority);
-    document.getElementById('task-list').appendChild(taskItem);
-    saveTasks();
 }
 
 function createTaskElement(taskName, taskPriority) {
